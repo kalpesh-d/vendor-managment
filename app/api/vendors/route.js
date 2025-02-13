@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server"
-// import { auth } from "@/auth"
+import { auth } from "@/auth"
 import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
 
 export async function GET(req) {
-  // const session = await auth()
-  // if (!session?.user?.email) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  // }
+  const session = await auth()
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
 
   const vendors = await prisma.vendor.findMany({})
 
@@ -16,10 +16,10 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  // const session = await auth()
-  // if (!session?.user?.email) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  // }
+  const session = await auth()
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
 
   const data = await req.json()
 
@@ -33,15 +33,15 @@ export async function POST(req) {
     country,
     zipCode
   } = data
-  // const user = await prisma.user.findUnique({
-  //   where: { email: session.user.email }
-  // })
 
-  // if (!user) {
-  //   return NextResponse.json({ error: "User not found" }, { status: 404 })
-  // }
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  })
 
-  // Create vendor with user relationship
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 })
+  }
+
   const vendor = await prisma.vendor.create({
     data: {
       name,
