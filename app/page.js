@@ -15,10 +15,19 @@ export default async function Home() {
   let totalPages = 0;
 
   if (session) {
+    const user = await prisma.user.upsert({
+      where: { email: session.user.email },
+      update: {},
+      create: {
+        email: session.user.email,
+        name: session.user.name,
+      },
+    });
+
     const [vendorData, totalCount] = await Promise.all([
       prisma.vendor.findMany({
         where: {
-          userId: session.user.id,
+          userId: user.id,
         },
         take: ITEMS_PER_PAGE,
         orderBy: {
@@ -27,7 +36,7 @@ export default async function Home() {
       }),
       prisma.vendor.count({
         where: {
-          userId: session.user.id,
+          userId: user.id,
         },
       }),
     ]);

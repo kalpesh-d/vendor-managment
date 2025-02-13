@@ -51,10 +51,22 @@ export async function POST(request) {
 
   try {
     const data = await request.json()
+
+    // First ensure the user exists in the database
+    const user = await prisma.user.upsert({
+      where: { email: session.user.email },
+      update: {},
+      create: {
+        email: session.user.email,
+        name: session.user.name,
+      },
+    })
+
+    // Create the vendor with the user association
     const vendor = await prisma.vendor.create({
       data: {
         ...data,
-        userId: session.user.id,
+        userId: user.id,
       },
     })
 

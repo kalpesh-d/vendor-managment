@@ -9,10 +9,18 @@ export default async function EditVendorPage({ params }) {
     redirect('/');
   }
 
-  const vendor = await prisma.vendor.findUnique({
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user) {
+    redirect('/');
+  }
+
+  const vendor = await prisma.vendor.findFirst({
     where: {
       id: params.id,
-      userId: session.user.id,
+      userId: user.id,
     },
   });
 

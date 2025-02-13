@@ -9,10 +9,18 @@ export async function GET(request, { params }) {
   }
 
   try {
-    const vendor = await prisma.vendor.findUnique({
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    })
+
+    if (!user) {
+      return new NextResponse("User not found", { status: 404 })
+    }
+
+    const vendor = await prisma.vendor.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId: user.id,
       },
     })
 
@@ -34,11 +42,19 @@ export async function PUT(request, { params }) {
   }
 
   try {
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    })
+
+    if (!user) {
+      return new NextResponse("User not found", { status: 404 })
+    }
+
     const data = await request.json()
     const vendor = await prisma.vendor.update({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId: user.id,
       },
       data,
     })
@@ -57,10 +73,18 @@ export async function DELETE(request, { params }) {
   }
 
   try {
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    })
+
+    if (!user) {
+      return new NextResponse("User not found", { status: 404 })
+    }
+
     await prisma.vendor.delete({
       where: {
         id: params.id,
-        userId: session.user.id,
+        userId: user.id,
       },
     })
 
