@@ -1,46 +1,72 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
-import { PrismaClient } from "@prisma/client"
+import prisma from "@/lib/prisma"
 
-const prisma = new PrismaClient()
-
-export async function GET(req, { params }) {
-  // const session = await auth()
-  // if (!session) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  // }
-
-  const vendor = await prisma.vendor.findUnique({
-    where: { id: params.id },
-  })
-
-  return NextResponse.json(vendor)
-}
-
-export async function PUT(req, { params }) {
+export async function GET(request, { params }) {
   const session = await auth()
   if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return new NextResponse("Unauthorized", { status: 401 })
   }
 
-  const data = await req.json()
-  const vendor = await prisma.vendor.update({
-    where: { id: params.id },
-    data,
-  })
+  try {
+    const vendor = await prisma.vendor.findUnique({
+      where: {
+        id: params.id,
+        userId: session.user.id,
+      },
+    })
 
-  return NextResponse.json(vendor)
+    if (!vendor) {
+      return new NextResponse("Not Found", { status: 404 })
+    }
+
+    return NextResponse.json(vendor)
+  } catch (error) {
+    console.error("Error fetching vendor:", error)
+    return new NextResponse("Internal Server Error", { status: 500 })
+  }
 }
 
-export async function DELETE({ params }) {
-  // const session = await auth()
-  // if (!session) {
-  //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  // }
+export async function PUT(request, { params }) {
+  const session = await auth()
+  if (!session) {
+    return new NextResponse("Unauthorized", { status: 401 })
+  }
 
-  await prisma.vendor.delete({
-    where: { id: params.id },
-  })
+  try {
+    const data = await request.json()
+    const vendor = await prisma.vendor.update({
+      where: {
+        id: params.id,
+        userId: session.user.id,
+      },
+      data,
+    })
 
-  return NextResponse.json({ success: true })
+    return NextResponse.json(vendor)
+  } catch (error) {
+    console.error("Error updating vendor:", error)
+    return new NextResponse("Internal Server Error", { status: 500 })
+  }
+}
+
+export async function DELETE(request, { params }) {
+  const session = await auth()
+  if (!session) {
+    return new NextResponse("Unauthorized", { status: 401 })
+  }
+
+  try {
+    await prisma.vendor.delete({
+      where: {
+        id: params.id,
+        userId: session.user.id,
+      },
+    })
+
+    return new NextResponse(null, { status: 204 })
+  } catch (error) {
+    console.error("Error deleting vendor:", error)
+    return new NextResponse("Internal Server Error", { status: 500 })
+  }
 }
