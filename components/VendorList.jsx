@@ -14,7 +14,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Edit2, Trash2 } from "lucide-react";
 
-export default function VendorList({ initialVendors, totalPages }) {
+export default function VendorList({ initialVendors = [], totalPages = 1 }) {
   const [vendors, setVendors] = useState(initialVendors);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -25,10 +25,11 @@ export default function VendorList({ initialVendors, totalPages }) {
     try {
       const response = await fetch(`/api/vendors?page=${page}`);
       const data = await response.json();
-      setVendors(data.vendors);
+      setVendors(data.vendors || []);
       setCurrentPage(page);
     } catch (error) {
       console.error('Error loading vendors:', error);
+      setVendors([]);
     } finally {
       setLoading(false);
     }
@@ -77,7 +78,7 @@ export default function VendorList({ initialVendors, totalPages }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {vendors.length === 0 ? (
+            {(!vendors || vendors.length === 0) ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                   No vendors found
@@ -133,4 +134,4 @@ export default function VendorList({ initialVendors, totalPages }) {
       )}
     </Card>
   );
-} 
+}
