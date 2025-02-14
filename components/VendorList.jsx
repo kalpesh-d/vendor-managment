@@ -1,137 +1,124 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import VendorTableHeader from "./VendorTableHeader";
+import LoadingSpinner from "./LoadingSpinner";
 import { Card } from "@/components/ui/card";
-import { Edit2, Trash2 } from "lucide-react";
+import VendorRow from "./VendorRow";
+import Pagination from "./Pagination";
+import { useState } from "react";
 
-export default function VendorList({ initialVendors = [], totalPages = 1 }) {
-  const [vendors, setVendors] = useState(initialVendors);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(null);
+const useVendors = (initialVendors) => {
+  const [state, setState] = useState({
+    vendors: initialVendors,
+    currentPage: 1,
+    loading: false,
+    deleteLoading: null,
+    error: null
+  });
+
+  const setError = (error) => setState(s => ({ ...s, error }));
+  const setLoading = (loading) => setState(s => ({ ...s, loading }));
 
   const loadPage = async (page) => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(`/api/vendors?page=${page}`);
-      const data = await response.json();
-      setVendors(data.vendors || []);
-      setCurrentPage(page);
-    } catch (error) {
-      console.error('Error loading vendors:', error);
-      setVendors([]);
-    } finally {
-      setLoading(false);
+      const res = await fetch(`/api/vendors?page=${page}`);
+      if (!res.ok) throw new Error('Failed to load vendors');
+      const data = await res.json();
+      setState(s => ({
+        ...s,
+        vendors: data.vendors || [],
+        currentPage: page,
+        loading: false
+      }));
+    } catch (err) {
+      console.error(err);
+      setState(s => ({
+        ...s,
+        vendors: [],
+        error: 'Failed to load vendors. Please try again.',
+        loading: false
+      }));
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this vendor?')) {
-      return;
-    }
-
-    setDeleteLoading(id);
+    if (!confirm('Are you sure?')) return;
+    setState(s => ({ ...s, deleteLoading: id, error: null }));
     try {
-      const response = await fetch(`/api/vendors/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete vendor');
-      }
-
-      // Refresh the current page
-      loadPage(currentPage);
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to delete vendor');
+      const res = await fetch(`/api/vendors/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete vendor');
+      await loadPage(state.currentPage);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to delete vendor. Please try again.');
     } finally {
-      setDeleteLoading(null);
+      setState(s => ({ ...s, deleteLoading: null }));
     }
   };
+
+  return { ...state, loadPage, handleDelete };
+};
+
+export default function VendorList({ initialVendors = [], totalPages = 1 }) {
+  const {
+    vendors,
+    currentPage,
+    loading,
+    deleteLoading,
+    error,
+    loadPage,
+    handleDelete
+  } = useVendors(initialVendors);
 
   return (
     <Card className="overflow-hidden">
       <div className="relative">
         {loading && (
           <div className="absolute inset-0 bg-background/50 flex items-center justify-center backdrop-blur-sm">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <LoadingSpinner />
+          </div>
+        )}
+        {error && (
+          <div className="p-4 text-center text-red-500 bg-red-50 dark:bg-red-950/50">
+            {error}
           </div>
         )}
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Vendor Name</TableHead>
-              <TableHead>Bank Account No.</TableHead>
-              <TableHead>Bank Name</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+          <VendorTableHeader />
           <TableBody>
-            {(!vendors || vendors.length === 0) ? (
+            {!vendors.length ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                  No vendors found
+                  {loading ? 'Loading...' : 'No vendors found'}
                 </TableCell>
               </TableRow>
             ) : (
-              vendors.map((vendor) => (
-                <TableRow key={vendor._id}>
-                  <TableCell className="font-medium">{vendor.name}</TableCell>
-                  <TableCell>{vendor.bankAccountNo}</TableCell>
-                  <TableCell>{vendor.bankName}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Link href={`/vendors/${vendor._id}/edit`}>
-                      <Button variant="outline" size="icon" className="h-8 w-8">
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleDelete(vendor._id)}
-                      disabled={deleteLoading === vendor._id}
-                    >
-                      {deleteLoading === vendor._id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-background"></div>
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TableCell>
-                </TableRow>
+              vendors.map(vendor => (
+                <VendorRow
+                  key={vendor._id}
+                  vendor={vendor}
+                  onDelete={handleDelete}
+                  isDeleting={deleteLoading}
+                />
               ))
             )}
           </TableBody>
         </Table>
       </div>
-
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 p-4 border-t">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <Button
-              key={page}
-              variant={currentPage === page ? "default" : "outline"}
-              size="sm"
-              onClick={() => loadPage(page)}
-              disabled={loading}
-            >
-              {page}
-            </Button>
-          ))}
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={loadPage}
+        isLoading={loading}
+      />
     </Card>
   );
 }

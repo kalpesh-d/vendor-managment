@@ -19,8 +19,23 @@ export async function GET(request) {
       return new NextResponse("User not found", { status: 404 })
     }
 
-    const vendors = await Vendor.find({ userId: user._id })
-    return NextResponse.json(vendors)
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const skip = (page - 1) * ITEMS_PER_PAGE
+
+    const [vendors, totalCount] = await Promise.all([
+      Vendor.find({ userId: user._id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(ITEMS_PER_PAGE),
+      Vendor.countDocuments({ userId: user._id })
+    ])
+
+    return NextResponse.json({
+      vendors,
+      totalPages: Math.ceil(totalCount / ITEMS_PER_PAGE),
+      currentPage: page
+    })
   } catch (error) {
     console.error("Error fetching vendors:", error)
     return new NextResponse("Internal Server Error", { status: 500 })
@@ -36,7 +51,6 @@ export async function POST(request) {
   try {
     await dbConnect()
 
-    // First ensure the user exists in the database
     let user = await User.findOne({ email: session.user.email })
     if (!user) {
       user = await User.create({
@@ -47,7 +61,6 @@ export async function POST(request) {
 
     const data = await request.json()
 
-    // Create the vendor with the user association
     const vendor = await Vendor.create({
       ...data,
       userId: user._id,
