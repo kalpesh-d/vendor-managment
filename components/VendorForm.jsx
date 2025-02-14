@@ -86,23 +86,23 @@ export default function VendorForm({ vendor }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="addressLine1">Address Line 1</Label>
+            <Label htmlFor="addressLine1">Address Line 1 *</Label>
             <Input
               id="addressLine1"
               type="text"
               name="addressLine1"
+              required
               defaultValue={vendor?.addressLine1}
               placeholder="Enter address line 1"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="addressLine2">Address Line 2 *</Label>
+            <Label htmlFor="addressLine2">Address Line 2</Label>
             <Input
               id="addressLine2"
               type="text"
               name="addressLine2"
-              required
               defaultValue={vendor?.addressLine2}
               placeholder="Enter address line 2"
             />
