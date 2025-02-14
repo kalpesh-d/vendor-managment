@@ -85,12 +85,12 @@ export default function VendorList({ initialVendors, totalPages }) {
               </TableRow>
             ) : (
               vendors.map((vendor) => (
-                <TableRow key={vendor.id}>
+                <TableRow key={vendor._id}>
                   <TableCell className="font-medium">{vendor.name}</TableCell>
                   <TableCell>{vendor.bankAccountNo}</TableCell>
                   <TableCell>{vendor.bankName}</TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Link href={`/vendors/${vendor.id}/edit`}>
+                    <Link href={`/vendors/${vendor._id}/edit`}>
                       <Button variant="outline" size="icon" className="h-8 w-8">
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -99,10 +99,10 @@ export default function VendorList({ initialVendors, totalPages }) {
                       variant="destructive"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => handleDelete(vendor.id)}
-                      disabled={deleteLoading === vendor.id}
+                      onClick={() => handleDelete(vendor._id)}
+                      disabled={deleteLoading === vendor._id}
                     >
-                      {deleteLoading === vendor.id ? (
+                      {deleteLoading === vendor._id ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-background"></div>
                       ) : (
                         <Trash2 className="h-4 w-4" />

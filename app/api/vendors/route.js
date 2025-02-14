@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
-import prisma from "@/lib/prisma"
+import dbConnect from "@/lib/mongodb"
+import User from "@/models/User"
+import Vendor from "@/models/Vendor"
 
 const ITEMS_PER_PAGE = 10
 
@@ -10,33 +12,15 @@ export async function GET(request) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
 
-  const { searchParams } = new URL(request.url)
-  const page = parseInt(searchParams.get("page") || "1")
-  const skip = (page - 1) * ITEMS_PER_PAGE
-
   try {
-    const [vendors, totalCount] = await Promise.all([
-      prisma.vendor.findMany({
-        where: {
-          userId: session.user.id,
-        },
-        skip,
-        take: ITEMS_PER_PAGE,
-        orderBy: {
-          createdAt: "desc",
-        },
-      }),
-      prisma.vendor.count({
-        where: {
-          userId: session.user.id,
-        },
-      }),
-    ])
+    await dbConnect()
+    const user = await User.findOne({ email: session.user.email })
+    if (!user) {
+      return new NextResponse("User not found", { status: 404 })
+    }
 
-    return NextResponse.json({
-      vendors,
-      totalPages: Math.ceil(totalCount / ITEMS_PER_PAGE),
-    })
+    const vendors = await Vendor.find({ userId: user._id })
+    return NextResponse.json(vendors)
   } catch (error) {
     console.error("Error fetching vendors:", error)
     return new NextResponse("Internal Server Error", { status: 500 })
@@ -50,24 +34,23 @@ export async function POST(request) {
   }
 
   try {
-    const data = await request.json()
+    await dbConnect()
 
     // First ensure the user exists in the database
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {},
-      create: {
+    let user = await User.findOne({ email: session.user.email })
+    if (!user) {
+      user = await User.create({
         email: session.user.email,
         name: session.user.name,
-      },
-    })
+      })
+    }
+
+    const data = await request.json()
 
     // Create the vendor with the user association
-    const vendor = await prisma.vendor.create({
-      data: {
-        ...data,
-        userId: user.id,
-      },
+    const vendor = await Vendor.create({
+      ...data,
+      userId: user._id,
     })
 
     return NextResponse.json(vendor)

@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/auth"
-import prisma from "@/lib/prisma"
+import dbConnect from "@/lib/mongodb"
+import User from "@/models/User"
+import Vendor from "@/models/Vendor"
+import { Types } from "mongoose"
+
+function isValidObjectId(id) {
+  return Types.ObjectId.isValid(id);
+}
 
 export async function GET(request, { params }) {
   const session = await auth()
@@ -8,20 +15,22 @@ export async function GET(request, { params }) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
 
-  try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    })
+  const { id } = await params;
 
+  try {
+    if (!isValidObjectId(id)) {
+      return new NextResponse("Invalid vendor ID", { status: 400 })
+    }
+
+    await dbConnect()
+    const user = await User.findOne({ email: session.user.email })
     if (!user) {
       return new NextResponse("User not found", { status: 404 })
     }
 
-    const vendor = await prisma.vendor.findFirst({
-      where: {
-        id: params.id,
-        userId: user.id,
-      },
+    const vendor = await Vendor.findOne({
+      _id: Types.ObjectId.createFromHexString(id),
+      userId: user._id,
     })
 
     if (!vendor) {
@@ -41,23 +50,30 @@ export async function PUT(request, { params }) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
 
+  const { id } = await params;
+
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    })
+    if (!isValidObjectId(id)) {
+      return new NextResponse("Invalid vendor ID", { status: 400 })
+    }
+
+    await dbConnect()
+    const user = await User.findOne({ email: session.user.email })
 
     if (!user) {
       return new NextResponse("User not found", { status: 404 })
     }
 
     const data = await request.json()
-    const vendor = await prisma.vendor.update({
-      where: {
-        id: params.id,
-        userId: user.id,
-      },
-      data,
-    })
+    const vendor = await Vendor.findOneAndUpdate(
+      { _id: Types.ObjectId.createFromHexString(id), userId: user._id },
+      { $set: data },
+      { new: true }
+    )
+
+    if (!vendor) {
+      return new NextResponse("Vendor not found", { status: 404 })
+    }
 
     return NextResponse.json(vendor)
   } catch (error) {
@@ -72,21 +88,28 @@ export async function DELETE(request, { params }) {
     return new NextResponse("Unauthorized", { status: 401 })
   }
 
+  const { id } = await params;
+
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    })
+    if (!isValidObjectId(id)) {
+      return new NextResponse("Invalid vendor ID", { status: 400 })
+    }
+
+    await dbConnect()
+    const user = await User.findOne({ email: session.user.email })
 
     if (!user) {
       return new NextResponse("User not found", { status: 404 })
     }
 
-    await prisma.vendor.delete({
-      where: {
-        id: params.id,
-        userId: user.id,
-      },
+    const vendor = await Vendor.findOneAndDelete({
+      _id: Types.ObjectId.createFromHexString(id),
+      userId: user._id,
     })
+
+    if (!vendor) {
+      return new NextResponse("Vendor not found", { status: 404 })
+    }
 
     return new NextResponse(null, { status: 204 })
   } catch (error) {

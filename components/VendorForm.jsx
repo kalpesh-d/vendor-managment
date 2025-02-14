@@ -20,7 +20,7 @@ export default function VendorForm({ vendor }) {
     const data = Object.fromEntries(formData.entries());
 
     try {
-      const url = vendor ? `/api/vendors/${vendor.id}` : '/api/vendors';
+      const url = vendor ? `/api/vendors/${vendor._id}` : '/api/vendors';
       const method = vendor ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
